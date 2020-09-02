@@ -27,12 +27,12 @@ public class PublisherController {
         saveToDisk(log);
         // 3. 把数据发动到kafka
         sendToKafka(log);
-
         return "ok";
     }
 
-    @Autowired  // 自动注入
-            KafkaTemplate<String, String> kafka;
+    // 自动注入
+    @Autowired
+    KafkaTemplate<String, String> kafka;
 
     /**
      * 把数据发送到kafka
