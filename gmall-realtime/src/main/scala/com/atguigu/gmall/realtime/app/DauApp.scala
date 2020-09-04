@@ -45,20 +45,20 @@ object DauApp {
             client.close()
             result
         })
-        // 代码1: driver  只会执行一次
-        sourceStream.transform(rdd => {
-            // 代码2: driver  每个批次执行一次
-            rdd.mapPartitions((startupLogIt: Iterator[StartupLog]) => {
-                // 代码3:executor
-                val client: Jedis = RedisUtil.getClient
-                val result = startupLogIt.filter(startupLog => {
-                    println("过滤前: " + startupLog)
-                    client.sadd(s"dau:uids:${startupLog.logDate}", startupLog.mid) == 1
-                })
-                client.close()
-                result
-            })
-        })
+        /* // 代码1: driver  只会执行一次
+         sourceStream.transform(rdd => {
+             // 代码2: driver  每个批次执行一次
+             rdd.mapPartitions((startupLogIt: Iterator[StartupLog]) => {
+                 // 代码3:executor
+                 val client: Jedis = RedisUtil.getClient
+                 val result = startupLogIt.filter(startupLog => {
+                     println("过滤前: " + startupLog)
+                     client.sadd(s"dau:uids:${startupLog.logDate}", startupLog.mid) == 1
+                 })
+                 client.close()
+                 result
+             })
+         })*/
         // 3. 输出 (print foreachRdd)
         filteredStartupLogStream.print()
         // 4. 启动上下文
