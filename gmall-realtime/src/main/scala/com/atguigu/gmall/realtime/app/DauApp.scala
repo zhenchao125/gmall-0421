@@ -60,7 +60,13 @@ object DauApp {
              })
          })*/
         // 3. 输出 (print foreachRdd)
-        filteredStartupLogStream.print()
+        filteredStartupLogStream.foreachRDD(rdd => {
+            import org.apache.phoenix.spark._
+            rdd.saveToPhoenix("GMALL_DAU0421",
+                Seq("MID", "UID", "APPID", "AREA", "OS", "CHANNEL", "LOGTYPE", "VERSION", "TS", "LOGDATE", "LOGHOUR"),
+                zkUrl = Option("hadoop102,hadoop103,hadoop104:2181")
+            )
+        })
         // 4. 启动上下文
         ssc.start()
         // 5. 阻塞
