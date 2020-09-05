@@ -1,10 +1,16 @@
 package com.atguigu.gmall.canal
 
-import java.net.{InetSocketAddress, SocketAddress}
+import java.net.InetSocketAddress
 import java.util
 
+import com.alibaba.fastjson.JSONObject
 import com.alibaba.otter.canal.client.{CanalConnector, CanalConnectors}
+import com.alibaba.otter.canal.protocol.CanalEntry.RowChange
 import com.alibaba.otter.canal.protocol.{CanalEntry, Message}
+import com.atguigu.realtime.gmall.common.Constant
+import com.google.protobuf.ByteString
+
+import scala.collection.JavaConverters._
 
 /**
  * Author atguigu
@@ -12,6 +18,26 @@ import com.alibaba.otter.canal.protocol.{CanalEntry, Message}
  * 从canal服务器的某个实例中读取数据
  */
 object CanalClient {
+    
+    def handleRowData(rowDataList: util.List[CanalEntry.RowData],
+                      tableName: String,
+                      eventType: CanalEntry.EventType) = {
+        if (rowDataList.size() > 0 && tableName == "order_info" && eventType == CanalEntry.EventType.INSERT) {
+            for (rowData <- rowDataList.asScala) {
+                val obj = new JSONObject()
+                
+                val columns: util.List[CanalEntry.Column] = rowData.getAfterColumnsList
+                for (column <- columns.asScala) {
+                    obj.put(column.getName, column.getValue)
+                }
+                // 写到kafka
+                // 1. 创建一个生产者
+                // 2. 写
+                MyKafkaUtil.send(Constant.ORDER_INFO_TOPIC, obj.toJSONString)
+            }
+        }
+    }
+    
     def main(args: Array[String]): Unit = {
         // 1. 连接到canal
         val addr = new InetSocketAddress("hadoop102", 11111)
@@ -25,9 +51,17 @@ object CanalClient {
         while (true) {
             val msg: Message = conn.get(100)
             val entries: util.List[CanalEntry.Entry] = msg.getEntries
-            if(entries != null && !entries.isEmpty){
-                println(entries)
-            }else{
+            if (entries != null && !entries.isEmpty) {
+                for (entry <- entries.asScala) {
+                    if (entry != null && entry.hasEntryType && entry.getEntryType == CanalEntry.EntryType.ROWDATA) {
+                        val storeValue: ByteString = entry.getStoreValue
+                        val rowChange: RowChange = RowChange.parseFrom(storeValue)
+                        val rowDataList: util.List[CanalEntry.RowData] = rowChange.getRowDatasList
+                        // 只处理部分表
+                        handleRowData(rowDataList, entry.getHeader.getTableName, rowChange.getEventType)
+                    }
+                }
+            } else {
                 System.out.println("没有拉到数据, 3s后继续拉取...");
                 Thread.sleep(3000)
             }
