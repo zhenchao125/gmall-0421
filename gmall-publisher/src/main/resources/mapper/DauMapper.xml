@@ -4,4 +4,9 @@
     <select id="getDau" resultType="java.lang.Long">
          select count(*) from GMALL_DAU0421 where LOGDATE= #{date}
     </select>
+
+    <select id="getHourDau" resultMap="mapList">
+        select LOGHOUR, count(*) COUNT from GMALL_DAU0421 where LOGDATE=#{date} group by LOGHOUR
+    </select>
+    <resultMap id="mapList" type="java.util.Map"></resultMap>
 </mapper>

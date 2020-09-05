@@ -40,7 +40,10 @@ object DauApp {
             val client: Jedis = RedisUtil.getClient
             val result = startupLogIt.filter(startupLog => {
                 println("过滤前: " + startupLog)
-                client.sadd(s"dau:uids:${startupLog.logDate}", startupLog.mid) == 1
+                
+                val r = client.sadd(s"dau:uids:${startupLog.logDate}", startupLog.mid)
+                client.expire(s"dau:uids:${startupLog.logDate}", 24 * 60 * 60)
+                r == 1
             })
             client.close()
             result
