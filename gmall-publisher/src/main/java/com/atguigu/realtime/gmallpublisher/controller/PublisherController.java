@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,31 +42,52 @@ public class PublisherController {
         map2.put("value", 233);
         result.add(map2);
 
+        Map<String, Object> map3 = new HashMap<>();
+        map3.put("id", "order_amount");
+        map3.put("name", "新增交易额");
+        map3.put("value", service.getTotalAmount(date));
+        result.add(map3);
+
         return JSON.toJSONString(result);
     }
 
 
     // http://localhost:8070/realtime-hour?id=dau&date=2020-02-11
+    // http://localhost:8070/realtime-hour?id=order_amount&date=2020-02-14
     @GetMapping("/realtime-hour")
-    public String realtimeHour(String id, String date){
-        Map<String, Long> today = service.getHourDau(date);
-        Map<String, Long> yesterday = service.getHourDau(getYesterday(date));
+    public String realtimeHour(String id, String date) {
+        if ("dau".equals(id)) {
+            Map<String, Long> today = service.getHourDau(date);
+            Map<String, Long> yesterday = service.getHourDau(getYesterday(date));
 
-        HashMap<String,  Map<String, Long> > result = new HashMap<>();
-        result.put("yesterday", yesterday);
-        result.put("today", today);
+            HashMap<String, Map<String, Long>> result = new HashMap<>();
+            result.put("yesterday", yesterday);
+            result.put("today", today);
 
-        return JSON.toJSONString(result);
+            return JSON.toJSONString(result);
+        }else if("order_amount".equals(id)){
+            Map<String, BigDecimal> today = service.getHourTotalAmount(date);
+            Map<String, BigDecimal> yesterday = service.getHourTotalAmount(getYesterday(date));
+
+            HashMap<String, Map<String, BigDecimal>> result = new HashMap<>();
+            result.put("yesterday", yesterday);
+            result.put("today", today);
+            return JSON.toJSONString(result);
+        }
+        return "ok";
+
     }
 
-    private String getYesterday(String date){
+    private String getYesterday(String date) {
         return LocalDate.parse(date).minusDays(1).toString();
     }
 
 }
 /*
 [{"id":"dau","name":"新增日活","value":1200},
-{"id":"new_mid","name":"新增设备","value":233} ]
+{"id":"new_mid","name":"新增设备","value":233 },
+{"id":"order_amount","name":"新增交易额","value":1000.2 }]
+
 
 
 {"yesterday":{"11":383,"12":123,"17":88,"19":200 },

@@ -1,11 +1,17 @@
 package com.atguigu.realtime.gmallpublisher.service;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 public interface PublisherService {
     Long getDau(String date);
 
     Map<String, Long> getHourDau(String date);
+
+
+    BigDecimal getTotalAmount(String date);
+
+    Map<String, BigDecimal> getHourTotalAmount(String date);
 }
 /*
 +----------+-----------+
