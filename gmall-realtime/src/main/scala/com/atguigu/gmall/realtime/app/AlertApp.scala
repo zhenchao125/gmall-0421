@@ -8,6 +8,8 @@ import com.atguigu.realtime.gmall.common.Constant
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.{Minutes, Seconds}
 
+import scala.util.control.Breaks._
+
 /**
  * Author atguigu
  * Date 2020/9/7 14:16
@@ -41,21 +43,24 @@ object AlertApp extends BaseApp {
                     
                     //4. 一个boolean值, 表示是否浏览商品
                     var isBrowser = false
-                    it.foreach(eventLog => {
-                        events.add(eventLog.eventId)
-                        eventLog.eventId match {
-                            // 如果是优惠券
-                            case "coupon" =>
-                                uids.add(eventLog.uid)
-                                items.add(eventLog.itemId)
-                            // 如果浏览商品
-                            case "clickItem" =>
-                                // 5分种内有浏览商品
-                                isBrowser = true
-                            case _ =>
-                        }
-                        
-                    })
+                    breakable {
+                        it.foreach(eventLog => {
+                            events.add(eventLog.eventId)
+                            eventLog.eventId match {
+                                // 如果是优惠券
+                                case "coupon" =>
+                                    uids.add(eventLog.uid)
+                                    items.add(eventLog.itemId)
+                                // 如果浏览商品
+                                case "clickItem" =>
+                                    // 5分种内有浏览商品
+                                    isBrowser = true
+                                    break
+                                case _ =>
+                            }
+                            
+                        })
+                    }
                     // (true, 具体语境信息)
                     (uids.size() >= 3 && !isBrowser, AlertInfo(mid, uids, items, events, System.currentTimeMillis()))
             }
