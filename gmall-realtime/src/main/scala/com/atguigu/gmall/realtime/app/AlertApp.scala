@@ -74,8 +74,6 @@ object AlertApp extends BaseApp {
                 rdd.collect().foreach(println)
                 println("打印时间戳结束")
             })
-        
-        
     }
 }
 
