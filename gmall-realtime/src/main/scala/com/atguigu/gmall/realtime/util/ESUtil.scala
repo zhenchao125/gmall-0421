@@ -2,7 +2,7 @@ package com.atguigu.gmall.realtime.util
 
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
-import io.searchbox.core.Index
+import io.searchbox.core.{Bulk, Index}
 
 import scala.collection.JavaConverters._
 
@@ -21,20 +21,56 @@ object ESUtil {
     factory.setHttpClientConfig(conf)
     
     def main(args: Array[String]): Unit = {
+        val sources = Iterator(("abc", User("a", 1)), User("b", 2))
+        insertBulk("user0421", sources)
+    }
+    
+    
+    def insertBulk(index: String, sources: Iterator[Object]): Unit = {
+        val client: JestClient = factory.getObject
+        val builder = new Bulk.Builder()
+            .defaultIndex(index)
+            .defaultType("_doc")
+        /*sources.foreach(source => {
+            val action = source match {
+                case (id: String, s) =>
+                    new Index.Builder(s)
+                        .id(id)
+                        .build()
+                case s =>
+                    new Index.Builder(s)
+                        .build()
+            }
+            builder.addAction(action)
+        })*/
         
+        /*sources.foreach {
+            case (id: String, s) =>
+                val action = new Index.Builder(s)
+                    .id(id)
+                    .build()
+                builder.addAction(action)
+            case s =>
+                val action = new Index.Builder(s)
+                    .build()
+                builder.addAction(action)
+        }*/
+        sources
+            .map {
+                case (id: String, s) =>
+                    new Index.Builder(s)
+                        .id(id)
+                        .build()
+                
+                case s =>
+                    new Index.Builder(s)
+                        .build()
+                
+            }
+            .foreach(builder.addAction)
         
-        /*val source =
-            """
-              |{
-              |  "name": "lisi",
-              |  "age": 20
-              |}
-              |""".stripMargin*/
-        val source = User("aaaaa", 20)
-        
-//        insertSingle("user0421", ("100", source))
-//        insertSingle("user0421", (100, source))
-//        insertSingle("user0421", source)
+        client.execute(builder.build())
+        client.close()
     }
     
     

@@ -72,6 +72,7 @@ object AlertApp extends BaseApp {
                 println("打印时间戳开始")
                 // 把数据写入到es
                 rdd.collect().foreach(println)
+                
                 println("打印时间戳结束")
             })
     }
