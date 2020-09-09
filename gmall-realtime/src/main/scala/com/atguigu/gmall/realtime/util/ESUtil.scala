@@ -1,8 +1,10 @@
 package com.atguigu.gmall.realtime.util
 
+import com.atguigu.gmall.realtime.bean.AlertInfo
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.{Bulk, Index}
+import org.apache.spark.rdd.RDD
 
 import scala.collection.JavaConverters._
 
@@ -19,12 +21,6 @@ object ESUtil {
         .readTimeout(1000 * 10)
         .build()
     factory.setHttpClientConfig(conf)
-    
-    def main(args: Array[String]): Unit = {
-        val sources = Iterator(("abc", User("a", 1)), User("b", 2))
-        insertBulk("user0421", sources)
-    }
-    
     
     def insertBulk(index: String, sources: Iterator[Object]): Unit = {
         val client: JestClient = factory.getObject
@@ -95,17 +91,12 @@ object ESUtil {
         client.close()
     }
     
-    
+    implicit class RichES(rdd: RDD[AlertInfo]) {
+        def saveToES(index: String): Unit = {
+            rdd.foreachPartition(infoIt => {
+                ESUtil.insertBulk(index, infoIt.map(info => (s"${info.mid}_${info.ts / 1000 / 60}", info)))
+            })
+        }
+    }
 }
 
-case class User(name: String, age: Int)
-
-/*
-POST /user0421/_doc/1
-{
-  "name": "lisi",
-  "age": 20
-}
-
-
- */

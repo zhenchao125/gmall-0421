@@ -4,7 +4,9 @@ import java.{util => ju}
 
 import com.alibaba.fastjson.JSON
 import com.atguigu.gmall.realtime.bean.{AlertInfo, EventLog}
+import com.atguigu.gmall.realtime.util.ESUtil
 import com.atguigu.realtime.gmall.common.Constant
+import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.{Minutes, Seconds}
 
@@ -71,12 +73,22 @@ object AlertApp extends BaseApp {
             .foreachRDD(rdd => {
                 println("打印时间戳开始")
                 // 把数据写入到es
-                rdd.collect().foreach(println)
-                
+                /*rdd.foreachPartition(infoIt => {
+                    ESUtil.insertBulk("gmall_coupon_alert", infoIt.map(info => (s"${info.mid}_${info.ts / 1000 / 60}", info)))
+                })
+                */
+                //implicit val rdd2RichES = (rdd: RDD[AlertInfo]) => new RichES(rdd)
+               
+                import com.atguigu.gmall.realtime.util.ESUtil._
+                rdd.saveToES("gmall_coupon_alert")
                 println("打印时间戳结束")
             })
     }
+    
+
 }
+
+
 
 /*
 同一设备，
