@@ -22,9 +22,11 @@ abstract class BaseAppV2 {
         val conf: SparkConf = new SparkConf().setMaster(master).setAppName(appName)
         val ssc = new StreamingContext(conf, Seconds(bachTime))
         
-       val streams =  topics.map(topic => {
-           (topic, MyKafkaUtil.getKafkaStream(ssc, groupId, Set(topic)))
-        }).toMap
+        val streams = topics
+            .map(topic => {
+                (topic, MyKafkaUtil.getKafkaStream(ssc, groupId, Set(topic)))
+            })
+            .toMap
         
         run(streams)
         
