@@ -43,7 +43,7 @@ object CanalClient {
             // 2. 写
             new Thread() {
                 override def run(): Unit = {
-                    Thread.sleep(new Random().nextInt(9 * 1000))
+                    Thread.sleep(new Random().nextInt(20 * 1000))
                     MyKafkaUtil.send(topic, obj.toJSONString)
                 }
             }.start()
