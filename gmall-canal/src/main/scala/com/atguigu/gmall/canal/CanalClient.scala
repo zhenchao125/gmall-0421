@@ -23,18 +23,24 @@ object CanalClient {
                       tableName: String,
                       eventType: CanalEntry.EventType) = {
         if (rowDataList.size() > 0 && tableName == "order_info" && eventType == CanalEntry.EventType.INSERT) {
-            for (rowData <- rowDataList.asScala) {
-                val obj = new JSONObject()
-                
-                val columns: util.List[CanalEntry.Column] = rowData.getAfterColumnsList
-                for (column <- columns.asScala) {
-                    obj.put(column.getName, column.getValue)
-                }
-                // 写到kafka
-                // 1. 创建一个生产者
-                // 2. 写
-                MyKafkaUtil.send(Constant.ORDER_INFO_TOPIC, obj.toJSONString)
+            handleData(rowDataList, Constant.ORDER_INFO_TOPIC)
+        } else if (rowDataList.size() > 0 && tableName == "order_detail" && eventType == CanalEntry.EventType.INSERT) {
+            handleData(rowDataList, Constant.ORDER_DETAIL_TOPIC)
+        }
+    }
+    
+    private def handleData(rowDataList: util.List[CanalEntry.RowData], topic: String): Unit = {
+        for (rowData <- rowDataList.asScala) {
+            val obj = new JSONObject()
+            
+            val columns: util.List[CanalEntry.Column] = rowData.getAfterColumnsList
+            for (column <- columns.asScala) {
+                obj.put(column.getName, column.getValue)
             }
+            // 写到kafka
+            // 1. 创建一个生产者
+            // 2. 写
+            MyKafkaUtil.send(topic, obj.toJSONString)
         }
     }
     
