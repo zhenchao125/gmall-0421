@@ -15,12 +15,13 @@ abstract class BaseAppV2 {
     val master: String
     val appName: String
     val bachTime: Int
+    var ssc: StreamingContext = _
     
     def run(streams: Map[String, DStream[String]]): Unit
     
     def main(args: Array[String]): Unit = {
         val conf: SparkConf = new SparkConf().setMaster(master).setAppName(appName)
-        val ssc = new StreamingContext(conf, Seconds(bachTime))
+        ssc = new StreamingContext(conf, Seconds(bachTime))
         
         val streams = topics
             .map(topic => {

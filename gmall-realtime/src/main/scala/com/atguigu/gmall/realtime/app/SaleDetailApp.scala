@@ -1,9 +1,10 @@
 package com.atguigu.gmall.realtime.app
 
 import com.alibaba.fastjson.JSON
-import com.atguigu.gmall.realtime.bean.{OrderDetail, OrderInfo, SaleDetail}
+import com.atguigu.gmall.realtime.bean.{OrderDetail, OrderInfo, SaleDetail, UserInfo}
 import com.atguigu.gmall.realtime.util.RedisUtil
 import com.atguigu.realtime.gmall.common.Constant
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming.dstream.DStream
 import org.json4s.jackson.Serialization
 import redis.clients.jedis.Jedis
@@ -16,7 +17,7 @@ import scala.collection.JavaConverters._
  */
 object SaleDetailApp extends BaseAppV2 {
     override val topics: Set[String] = Set(Constant.ORDER_INFO_TOPIC, Constant.ORDER_DETAIL_TOPIC)
-    override val groupId: String = "SaleDetailApp"
+    override val groupId: String = "SaleDetailApp1"
     override val master: String = "local[2]"
     override val appName: String = "SaleDetailApp"
     override val bachTime: Int = 3
@@ -112,8 +113,48 @@ object SaleDetailApp extends BaseAppV2 {
         
     }
     
+    // 从mysql反查到user信息
     def joinUser(saleDetail: DStream[SaleDetail]) = {
-    
+        // 使用spark-sql读
+        val spark = SparkSession.builder()
+            .config(ssc.sparkContext.getConf)
+            .getOrCreate()
+        import spark.implicits._
+        
+        // 1. 先查询到user_info信息  sparkSql-> df/ds -> rdd
+        def readUserInfoes(ids: String) = {
+            
+            spark
+                .read
+                .format("jdbc")
+                .option("url", "jdbc:mysql://hadoop102:3306/gmall0421?useSSL=false")
+                .option("user", "root")
+                .option("password", "aaaaaa")
+                .option("query", s"select * from user_info where id in (${ids})")
+                .load()
+                .as[UserInfo]
+                .rdd
+                .map(userInfo => (userInfo.id, userInfo))
+        }
+        
+        // 2. saleDetail和user信息进行join   saleDetail-> rdd
+        saleDetail.transform(rdd => {
+            rdd.cache()  // rdd使用多次, 加缓存. 必须加
+            // [1, 2, 3]  => '1','2','3'
+            val ids = rdd.map(_.user_id).collect().mkString("'", "','", "'") // '1','2','3'
+            val userInfoRDD = readUserInfoes(ids) // 每个批次都要第一次user数据
+            
+            rdd
+                .map(saleDetail => (saleDetail.user_id, saleDetail))
+                .join(userInfoRDD)
+                .map {
+                    case (_, (saleDetail, userInfo)) =>
+                        saleDetail.mergeUserInfo(userInfo)
+                }
+            
+        })
+        
+        
     }
     
     override def run(streams: Map[String, DStream[String]]): Unit = {
@@ -126,6 +167,7 @@ object SaleDetailApp extends BaseAppV2 {
         val saleDetail = joinOrderInfoOrderDetail(orderInfoStream, orderDetailStream)
         // 2. join user
         val saleDetailWithUser = joinUser(saleDetail)
+        saleDetailWithUser.print()
     }
 }
 

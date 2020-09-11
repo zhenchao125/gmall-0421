@@ -8,10 +8,12 @@ import scala.beans.BeanProperty
  */
 object Test2 {
     def main(args: Array[String]): Unit = {
-        val a = A(10, "a")
+        /*val a = A(10, "a")
     
         val json: String = JSON.toJSONString(a, true)
-        println(json)
+        println(json)*/
+        val list1 = List(30, 50, 70, 60, 10, 20)
+        println(list1.mkString("'","','", "'"))
     }
 }
 
