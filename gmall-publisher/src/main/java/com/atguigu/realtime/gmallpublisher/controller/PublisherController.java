@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -76,6 +77,15 @@ public class PublisherController {
         }
         return "ok";
 
+    }
+
+
+    //  http://localhost:8070/sale_detail?date=2019-05-20&&startpage=1&&size=5&&keyword=手机小米
+    @GetMapping("/sale_detail")
+    public String saleDetail(String date, int startpage, int size, String keyword ) throws IOException {
+        Map<String, Object> saleDetailAndAgg = service.getSaleDetailAndAgg(date, keyword, startpage, size);
+        System.out.println(saleDetailAndAgg);
+        return "ok";
     }
 
     private String getYesterday(String date) {

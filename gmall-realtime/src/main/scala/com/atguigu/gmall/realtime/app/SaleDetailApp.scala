@@ -2,7 +2,7 @@ package com.atguigu.gmall.realtime.app
 
 import com.alibaba.fastjson.JSON
 import com.atguigu.gmall.realtime.bean.{OrderDetail, OrderInfo, SaleDetail, UserInfo}
-import com.atguigu.gmall.realtime.util.RedisUtil
+import com.atguigu.gmall.realtime.util.{ESUtil, RedisUtil}
 import com.atguigu.realtime.gmall.common.Constant
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming.dstream.DStream
@@ -139,10 +139,10 @@ object SaleDetailApp extends BaseAppV2 {
         
         // 2. saleDetail和user信息进行join   saleDetail-> rdd
         saleDetail.transform(rdd => {
-            rdd.cache()  // rdd使用多次, 加缓存. 必须加
+            rdd.cache() // rdd使用多次, 加缓存. 必须加
             // [1, 2, 3]  => '1','2','3'
             val ids = rdd.map(_.user_id).collect().mkString("'", "','", "'") // '1','2','3'
-            val userInfoRDD = readUserInfoes(ids) // 每个批次都要第一次user数据
+            val userInfoRDD = readUserInfoes(ids) // 每个批次都要一次user数据
             
             rdd
                 .map(saleDetail => (saleDetail.user_id, saleDetail))
@@ -151,10 +151,17 @@ object SaleDetailApp extends BaseAppV2 {
                     case (_, (saleDetail, userInfo)) =>
                         saleDetail.mergeUserInfo(userInfo)
                 }
-            
         })
-        
-        
+    }
+    
+    def write2ES(saleDetailWithUser: DStream[SaleDetail]): Unit = {
+        saleDetailWithUser.foreachRDD(rdd => {
+            rdd.foreachPartition(it => {
+                ESUtil.insertBulk(
+                    "gmall0421_sale_detail",
+                    it.map(sale => (sale.order_detail_id, sale)))
+            })
+        })
     }
     
     override def run(streams: Map[String, DStream[String]]): Unit = {
@@ -162,12 +169,18 @@ object SaleDetailApp extends BaseAppV2 {
             .map(json => JSON.parseObject(json, classOf[OrderInfo]))
         val orderDetailStream = streams(Constant.ORDER_DETAIL_TOPIC)
             .map(json => JSON.parseObject(json, classOf[OrderDetail]))
-        
+        orderDetailStream.cache()
+        orderInfoStream.cache()
+        orderInfoStream.print()
+        orderDetailStream.print()
         // 1. 对两个流进行join   join leftJoin rightJoin fullJoin
         val saleDetail = joinOrderInfoOrderDetail(orderInfoStream, orderDetailStream)
         // 2. join user
         val saleDetailWithUser = joinUser(saleDetail)
-        saleDetailWithUser.print()
+        // 3. 写数据到 ES
+        write2ES(saleDetailWithUser)
+        
+        
     }
 }
 
