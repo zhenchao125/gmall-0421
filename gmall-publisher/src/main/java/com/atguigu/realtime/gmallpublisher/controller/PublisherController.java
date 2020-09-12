@@ -1,6 +1,9 @@
 package com.atguigu.realtime.gmallpublisher.controller;
 
 import com.alibaba.fastjson.JSON;
+import com.atguigu.realtime.gmallpublisher.bean.Option;
+import com.atguigu.realtime.gmallpublisher.bean.SaleInfo;
+import com.atguigu.realtime.gmallpublisher.bean.Stat;
 import com.atguigu.realtime.gmallpublisher.service.PublisherService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -66,7 +69,7 @@ public class PublisherController {
             result.put("today", today);
 
             return JSON.toJSONString(result);
-        }else if("order_amount".equals(id)){
+        } else if ("order_amount".equals(id)) {
             Map<String, BigDecimal> today = service.getHourTotalAmount(date);
             Map<String, BigDecimal> yesterday = service.getHourTotalAmount(getYesterday(date));
 
@@ -82,10 +85,56 @@ public class PublisherController {
 
     //  http://localhost:8070/sale_detail?date=2019-05-20&&startpage=1&&size=5&&keyword=手机小米
     @GetMapping("/sale_detail")
-    public String saleDetail(String date, int startpage, int size, String keyword ) throws IOException {
+    public String saleDetail(String date, int startpage, int size, String keyword) throws IOException {
         Map<String, Object> saleDetailAndAgg = service.getSaleDetailAndAgg(date, keyword, startpage, size);
-        System.out.println(saleDetailAndAgg);
-        return "ok";
+        // 最终结果
+        SaleInfo saleInfo = new SaleInfo();
+        // 1. 设置total
+        Long total = (Long) saleDetailAndAgg.get("total");
+        saleInfo.setTotal(total);
+        // 2. 设置详情
+        List<Map> details = (List<Map>) saleDetailAndAgg.get("details");
+        saleInfo.setDetails(details);
+        // 3. 设置饼图
+        // 3.1 性别饼图
+        Map<String, Long> genderAgg = (Map<String, Long>) saleDetailAndAgg.get("genderAgg");
+        Stat genderStat = new Stat();
+        saleInfo.addStat(genderStat);
+        // 3.1.1 title
+        genderStat.setTitle("用户性别占比");
+        // 3.1.2 添加饼图的组成部分
+        for (Map.Entry<String, Long> entry : genderAgg.entrySet()) {
+            Option opt = new Option();
+            opt.setName(entry.getKey().equals("F") ? "女" : "男");
+            opt.setValue(entry.getValue());
+            genderStat.addOption(opt);
+        }
+        // 3.2 设置年龄的饼图
+        Map<String, Long> ageAgg = (Map<String, Long>) saleDetailAndAgg.get("ageAgg");
+        Stat ageStat = new Stat();
+        saleInfo.addStat(ageStat);
+        // 3.1.1 title
+        genderStat.setTitle("用户年龄占比");
+        // 3.1.2 组成部分
+        ageStat.addOption(new Option("20岁以下", 0L));
+        ageStat.addOption(new Option("20岁到30岁", 0L));
+        ageStat.addOption(new Option("30岁及以上", 0L));
+        for (String key : ageAgg.keySet()) {
+            int age = Integer.parseInt(key);
+            Long value = ageAgg.get(key);
+            if (age < 20) {
+                Option stat = ageStat.getOptions().get(0);
+                stat.setValue(stat.getValue() + value);
+            } else if (age < 30) {
+                Option stat = ageStat.getOptions().get(1);
+                stat.setValue(stat.getValue() + value);
+            } else {
+                Option stat = ageStat.getOptions().get(2);
+                stat.setValue(stat.getValue() + value);
+            }
+        }
+
+        return JSON.toJSONString(saleInfo).replace("details", "detail") ;
     }
 
     private String getYesterday(String date) {
