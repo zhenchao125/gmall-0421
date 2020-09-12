@@ -113,9 +113,9 @@ public class PublisherController {
         Map<String, Long> ageAgg = (Map<String, Long>) saleDetailAndAgg.get("ageAgg");
         Stat ageStat = new Stat();
         saleInfo.addStat(ageStat);
-        // 3.1.1 title
+        // 3.2.1 title
         genderStat.setTitle("用户年龄占比");
-        // 3.1.2 组成部分
+        // 3.2.2 组成部分
         ageStat.addOption(new Option("20岁以下", 0L));
         ageStat.addOption(new Option("20岁到30岁", 0L));
         ageStat.addOption(new Option("30岁及以上", 0L));
